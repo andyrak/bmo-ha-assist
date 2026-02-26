@@ -2,8 +2,6 @@
 
 **An animated face display & button controller for HomeAssistant voice satellites, built for Raspberry Pi.**
 
-[![Watch the Demo](https://img.youtube.com/vi/l5ggH-YhuAw/maxresdefault.jpg)](https://youtu.be/l5ggH-YhuAw)
-
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue) ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi-red) ![License](https://img.shields.io/badge/License-MIT-green)
 
 A dedicated Raspberry Pi shows reactive face animations driven by your HomeAssistant voice assistant pipeline — listening, thinking, speaking, idle — over a WebSocket connection. Physical buttons via an MCP23017 I2C GPIO expander let you control volume, mute, and trigger the voice pipeline without touching a screen.
