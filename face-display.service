@@ -1,0 +1,16 @@
+[Unit]
+Description=Face Display for HomeAssistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/be-more-agent
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/python3 face_display.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
