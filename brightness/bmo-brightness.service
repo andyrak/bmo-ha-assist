@@ -1,0 +1,6 @@
+[Unit]
+Description=Set BMO display brightness from schedule
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bmo-brightness auto

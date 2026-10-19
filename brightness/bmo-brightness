@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""Backlight control for the QDtech MPI5006 5" HDMI display (USB 0484:5750).
+
+Protocol, taken from the vendor's Windows tool (LCD-USB-BRIGHTNESS-Windows-V1.0):
+HID output report 4 = 04 aa 01 00 00 00 VV, zero-padded to 64 bytes,
+where VV = int(percent / 100 * 90). The vendor tool clamps percent to 5..100,
+so VV runs 0x04..0x5a.
+
+Usage:
+  bmo-brightness 40        set 40%
+  bmo-brightness auto      set whatever SCHEDULE says for the current time
+  bmo-brightness now       print the scheduled value for now, change nothing
+  bmo-brightness --raw N   send raw level N (0-90), bypassing the 5% floor
+"""
+import glob
+import os
+import sys
+import time
+
+VID, PID = 0x0484, 0x5750
+
+# (local time, percent). Brightness ramps linearly between points and wraps at
+# midnight, so equal neighbours hold flat. 5% is the lowest the vendor tool sends.
+SCHEDULE = [
+    ("06:30", 5),
+    ("08:00", 100),
+    ("19:00", 100),
+    ("21:30", 30),
+    ("23:00", 5),
+]
+
+
+def find_hidraw():
+    for node in sorted(glob.glob("/sys/class/hidraw/hidraw*")):
+        try:
+            with open(os.path.join(node, "device", "uevent")) as f:
+                if f"HID_ID=0003:{VID:08X}:{PID:08X}" in f.read():
+                    return "/dev/" + os.path.basename(node)
+        except OSError:
+            continue
+    sys.exit(f"display {VID:04x}:{PID:04x} not found")
+
+
+def level_for(percent):
+    percent = max(5, min(100, int(percent)))
+    return int(percent / 100 * 90)
+
+
+def packet(level):
+    level = max(0, min(90, int(level)))
+    return bytes([0x04, 0xAA, 0x01, 0x00, 0x00, 0x00, level]).ljust(64, b"\0")
+
+
+def send(level, dev=None):
+    fd = os.open(dev or find_hidraw(), os.O_WRONLY)
+    try:
+        os.write(fd, packet(level))
+    finally:
+        os.close(fd)
+
+
+def scheduled(now=None):
+    t = time.localtime(now)
+    m = t.tm_hour * 60 + t.tm_min
+    pts = sorted((int(hm[:2]) * 60 + int(hm[3:]), p) for hm, p in SCHEDULE)
+    nxt = next((i for i, (pm, _) in enumerate(pts) if m < pm), 0)
+    (a, pa), (b, pb) = pts[nxt - 1], pts[nxt]
+    span, pos = (b - a) % 1440, (m - a) % 1440
+    return pa if span == 0 else round(pa + (pb - pa) * pos / span)
+
+
+def main(argv):
+    if len(argv) == 2 and argv[1] == "auto":
+        send(level_for(scheduled()))
+    elif len(argv) == 2 and argv[1] == "now":
+        print(scheduled())
+    elif len(argv) == 3 and argv[1] == "--raw" and argv[2].isdigit():
+        send(int(argv[2]))
+    elif len(argv) == 2 and argv[1].isdigit():
+        send(level_for(int(argv[1])))
+    else:
+        sys.exit(__doc__.split("Usage:")[1])
+
+
+if __name__ == "__main__":
+    main(sys.argv)

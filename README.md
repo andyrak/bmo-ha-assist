@@ -16,6 +16,7 @@ A dedicated Raspberry Pi shows reactive face animations driven by your HomeAssis
 - **Hold-repeat** — hold the volume buttons for continuous adjustment (configurable timing)
 - **Graceful degradation** — runs without GPIO hardware, without HA, or in debug mode with keyboard controls
 - **Systemd service** — starts on boot, auto-restarts on failure
+- **Brightness schedule** — time-of-day backlight dimming over USB for the MPI5006 HDMI display (see [brightness/](brightness/README.md))
 - **Fully configurable** — JSON config for HA connection, button mappings, display settings, and state mapping
 
 ## Hardware
@@ -150,6 +151,16 @@ sudo systemctl enable --now face-display
 
 Check status: `sudo systemctl status face-display`
 
+### 6. Brightness schedule (optional, MPI5006 display)
+
+If the face runs on the QDtech MPI5006 5" HDMI display, the backlight can be dimmed on a time-of-day schedule over its USB cable:
+
+```bash
+sudo sh brightness/install.sh
+```
+
+See [brightness/README.md](brightness/README.md) for usage, editing the schedule, and the USB protocol.
+
 ## Project Structure
 
 ```
@@ -163,6 +174,12 @@ be-more-agent/
 │   ├── face_renderer.py         # PNG frame animation engine
 │   ├── ha_client.py             # HA WebSocket client (listen + send)
 │   └── gpio_buttons.py          # MCP23017 button poller
+├── brightness/                  # Backlight schedule for the MPI5006 HDMI display
+│   ├── bmo-brightness           # CLI: set brightness / apply schedule over USB HID
+│   ├── bmo-brightness.service   # oneshot that applies the schedule
+│   ├── bmo-brightness.timer     # runs it every 5 minutes and at boot
+│   ├── install.sh               # installs the CLI and enables the timer
+│   └── README.md                # usage, schedule, protocol notes
 └── faces/                       # Face animation frames
     ├── idle/                    # PNG sequence for idle state
     ├── listening/               # PNG sequence for listening
